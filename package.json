@@ -1,0 +1,12 @@
+{
+  "name": "nearley-reverse",
+  "version": "0.1.0",
+  "description": "Build source code from an AST",
+  "main": "reverse.js",
+  "repository": "https://github.com/tjvr/nearley-reverse",
+  "author": "tjvr <tim@tjvr.org>",
+  "license": "BSD-3-Clause",
+  "dependencies": {
+    "nearley": "^2.7.13"
+  }
+}
