@@ -1,29 +1,69 @@
 
 @{%
 
-function factory(encode, decode) {
+const moo = require('moo')
+
+let lexer = moo.compile([
+  {name: 'WS',      match: /[ \t]+/},
+  {name: 'ellips',  match: /\.{3}/},
+  {name: 'comment', match: /\/{2}(.*)$/},
+  {name: 'false',   match: /\<\>/},
+  {name: 'zero',    match: /\(\)/},
+  {name: 'empty',   match: /_( |$)/},
+  {name: 'number',  match: /([0-9]+(?:\.[0-9]+)?e-?[0-9]+)/}, // 123[.123]e[-]123
+  {name: 'number',  match: /((?:0|[1-9][0-9]*)?\.[0-9]+)/},   // [123].123
+  {name: 'number',  match: /((?:0|[1-9][0-9]*)\.[0-9]*)/},    // 123.[123]
+  {name: 'number',  match: /(0|[1-9][0-9]*)/},              // 123
+  {name: 'color',   match: /#([A-Fa-f0-9]{3}(?:[A-Fa-f0-9]{3})?)/},
+  {name: 'string',  match: /"((?:\\["\\]|[^\n"\\])*)"/}, // strings are backslash-escaped
+  {name: 'string',  match: /'((?:\\['\\]|[^\n'\\])*)'/},
+  {name: 'lparen',  match: /\(/},
+  {name: 'rparen',  match: /\)/},
+  {name: 'langle',  match: /\</},
+  {name: 'rangle',  match: /\>/},
+  {name: 'lsquare', match: /\[/},
+  {name: 'rsquare', match: /\]/},
+  {name: 'cloud',   match: /[☁]/},
+  {name: 'input',   match: /%[a-z](?:\.[a-zA-Z]+)?/},
+  {name: 'symbol',  match: /[-%#+*/=^,?]/},                // single character
+  {name: 'symbol',  match: /[_A-Za-z][-_A-Za-z0-9:',.]*/}, // word, as in a block
+  {name: 'iden',    match: /[^\n \t"'()<>=*\/+-]+/},     // user-defined names
+  {name: 'NL',      match: /\n/, lineBreaks: true },
+  {name: 'ERROR',   error: true},
+])
+
+lexer.has = function(name) {
+  return lexer.groups.find(g => g.tokenType === name)
+}
+
+%}
+@lexer lexer
+
+@{%
+
+function factory(decode, encode) {
   function process(d) {
-    return encode.apply(undefined, d);
+    return decode.apply(undefined, d);
   }
-  process.decode = decode
+  process.encode = encode
   return process
 }
 
-id.decode = function(x) { return x }
+id.encode = function(x) { return [x] }
 
 function literal(constant) {
-  return factory(function encode() {
+  return factory(function decode() {
     return constant
-  }, function decode(value) {
-    if (value !== constant) return false
+  }, function encode(value) {
+    if (value !== constant) { return false }
     return []
   })
 }
 
 function select(index) {
-  return factory(function encode(...children) {
+  return factory(function decode(...children) {
     return children[index]
-  }, function decode(value) {
+  }, function encode(value) {
     var children = []
     children[index] = value
     return children
@@ -31,13 +71,14 @@ function select(index) {
 }
 
 function block(selector, ...rest) {
-  return factory(function encode(...children) {
+  return factory(function decode(...children) {
     var args = [selector]
     rest.forEach(childIndex => {
       args.push(children[childIndex])
     })
     return args
-  }, function decode(array) {
+  }, function encode(array) {
+    if (array[0] !== selector) { return false }
     var children = [];
     rest.forEach((childIndex, argIndex) => {
       children[childIndex] = array[argIndex + 1]
@@ -46,7 +87,7 @@ function block(selector, ...rest) {
   })
 }
 
-var number = factory(function encodeNumber(...d) {
+var number = factory(function decodeNumber(...d) {
   var s = d.join('')
   var n = parseInt(s)
   if (!isNaN(n)) return n
@@ -54,15 +95,17 @@ var number = factory(function encodeNumber(...d) {
   if (!isNaN(f)) return f
   return s
   return parseInt(s)
-}, function decodeNumber(d) {
+}, function encodeNumber(d) {
   return '' + d
 })
 
-var join = factory(function encode(a) {
+/*
+var join = factory(function decode(a) {
   return a.join('')
-}, function decode(s) {
+}, function encode(s) {
   return Array.from(s)
 })
+*/
 
 var ignore = factory(a => null, _ => [])
 
@@ -453,17 +496,13 @@ block -> "else" {% block("else") %}
        | "..." {% block("ellips") %}
 
 
-_ -> [ ]:* {% ignore %}
-__ -> [ ]:+ {% ignore %}
+_ -> %WS:? {% ignore %}
+__ -> %WS {% ignore %}
 
-string -> "'hello'"
-number -> digits                {% number %}
-number -> digits [.] digits     {% number %}
+string -> %string
+number -> %number     {% number %}
 
-digits -> [0-9]:+   {% join %}
-
-color -> [#] [0-9a-z] [0-9a-z] [0-9a-z] [0-9a-z] [0-9a-z] [0-9a-z]
-       | [#] [0-9a-z] [0-9a-z] [0-9a-z]
+color -> %color
 
 VariableName -> "foo" {% id %}
 ListName -> "list" {% id %}

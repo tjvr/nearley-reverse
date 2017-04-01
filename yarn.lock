@@ -1331,6 +1331,10 @@ mkdirp@^0.5.1:
   dependencies:
     minimist "0.0.8"
 
+moo@^0.2.0:
+  version "0.2.0"
+  resolved "https://registry.yarnpkg.com/moo/-/moo-0.2.0.tgz#ff97028d7e647af628c7216537e2c41de6b917de"
+
 ms@0.7.2:
   version "0.7.2"
   resolved "https://registry.yarnpkg.com/ms/-/ms-0.7.2.tgz#ae25cf2512b3885a1d95d7f037868d8431124765"
@@ -1339,10 +1343,11 @@ natural-compare@^1.4.0:
   version "1.4.0"
   resolved "https://registry.yarnpkg.com/natural-compare/-/natural-compare-1.4.0.tgz#4abebfeed7541f2c27acfb29bdbbd15c8d5ba4f7"
 
-nearley@^2.8.0:
+"nearley@git://github.com/Hardmath123/nearley.git#moo":
   version "2.8.0"
-  resolved "https://registry.yarnpkg.com/nearley/-/nearley-2.8.0.tgz#7f88b503e3b373503f5c7e5b3b52bf134c86145b"
+  resolved "git://github.com/Hardmath123/nearley.git#1eec5ee49ef6f1b1dbba3f75809e058843f8eecb"
   dependencies:
+    moo "^0.2.0"
     nomnom "~1.6.2"
     railroad-diagrams "^1.0.0"
     randexp "^0.4.2"

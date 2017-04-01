@@ -8,6 +8,12 @@
   "license": "BSD-3-Clause",
   "dependencies": {
     "jest": "^19.0.2",
-    "nearley": "^2.8.0"
+    "nearley": "git://github.com/Hardmath123/nearley.git#moo"
+  },
+  "scripts": {
+    "build": "nearleyc examples/tosh.ne > tosh.js"
+  },
+  "devDependencies": {
+    "moo": "^0.2.0"
   }
 }
