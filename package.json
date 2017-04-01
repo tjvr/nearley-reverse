@@ -7,6 +7,7 @@
   "author": "tjvr <tim@tjvr.org>",
   "license": "BSD-3-Clause",
   "dependencies": {
+    "jest": "^19.0.2",
     "nearley": "^2.8.0"
   }
 }
