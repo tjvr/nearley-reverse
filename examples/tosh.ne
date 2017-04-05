@@ -78,7 +78,7 @@ function block(selector, ...rest) {
     })
     return args
   }, function encode(array) {
-    if (array[0] !== selector) { return false }
+    if (!array || array[0] !== selector) { return false }
     var children = [];
     rest.forEach((childIndex, argIndex) => {
       children[childIndex] = array[argIndex + 1]
@@ -88,16 +88,25 @@ function block(selector, ...rest) {
 }
 
 var number = factory(function decodeNumber(...d) {
-  var s = d.join('')
+  var s = d[0].value //.join('')
   var n = parseInt(s)
   if (!isNaN(n)) return n
   var f = parseFloat(s)
   if (!isNaN(f)) return f
-  return s
   return parseInt(s)
 }, function encodeNumber(d) {
+  if (typeof d !== 'number') { return false }
+  if ('' + d === 'NaN') { return false }
   return '' + d
 })
+
+var string = factory(function decodeNumber(...d) {
+  return d[0].value
+}, function encodeNumber(d) {
+  if (typeof d !== 'string') { return false }
+  return d
+})
+
 
 /*
 var join = factory(function decode(a) {
@@ -199,7 +208,7 @@ s2 -> s0 {% id %}
 
 n0 -> "-" _ number {% factory((a, _, n) => -n, (n) => [null, null, -n]) %}
     | number {% id %}
-    | "_" {% id %}
+    | "_" {% literal("") %}
 
 s0 -> string {% id %}
 
@@ -499,7 +508,7 @@ block -> "else" {% block("else") %}
 _ -> %WS:? {% ignore %}
 __ -> %WS {% ignore %}
 
-string -> %string
+string -> %string     {% string %}
 number -> %number     {% number %}
 
 color -> %color

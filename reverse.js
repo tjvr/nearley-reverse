@@ -1,48 +1,103 @@
 
-function generate(grammar, node) {
-  function generateNode(name, node) {
-    if (name.literal) {
-      return name.literal
-    }
-    if (name.type) {
-      return name
-    }
 
-    let rules = grammar.byName[name] || []
-    console.log(rules)
-    for (var i=rules.length; i--; ) {
-      let rule = rules[i]
-      console.log('#' + name)
-      let factory = rule.postprocess
-      let result
-      if (!factory) {
-        result = node || []
-      } else if (factory.encode) {
-        result = factory.encode(node)
-        if (result === false) { continue }
-        if (!Array.isArray(result)) { result = [result] }
-      } else {
-        continue
-      }
+class Deriving {
+  constructor(target, node) {
+    this.target = target
+    this.node = node
+  }
+}
 
-      console.log('=> ', result)
-
-      let out = []
-      for (var j=0; j<rule.symbols.length; j++) {
-        let child = generateNode(rule.symbols[j], result[j])
-        if (child === false) {
-          console.log('cant do', rule.symbols[j], result[j])
-          break
-        }
-        out.push(child)
-      }
-      if (out.length < rule.symbols.length) continue
-      return out
-    }
-    return false
+class PQueue {
+  constructor() {
+    this.first = null
   }
 
-  return generateNode(grammar.start, node)
+  insert(value) {
+    if (!this.first) {
+      this.first = {value: value, next: null}
+      return
+    }
+    var item = this.first
+    var previous = null
+    while (item !== null && item.value.cost < value.cost) {
+      previous = item
+      item = item.next
+    }
+    if (!previous) {
+      this.first = {value: value, next: item}
+    } else {
+      previous.next = {value: value, next: item}
+    }
+  }
+
+  pop() {
+    if (!this.first) { return }
+    let item = this.first
+    this.first = item.next
+    return item.value
+  }
+}
+
+function encode(rule, node) {
+  let factory = rule.postprocess
+  if (!factory) {
+    return node || []
+  } else if (factory.encode) {
+    var result = factory.encode(node)
+    if (result === false) return
+    if (!Array.isArray(result)) { result = [result] }
+    return result
+  }
+}
+
+function generate(grammar, node) {
+  let queue = new PQueue()
+  queue.insert({cost: 0, sequence: [new Deriving(grammar.start, node)]})
+
+  while (true) {
+    let result = queue.pop()
+    if (!result) return
+    let sequence = result.sequence
+    //console.log(sequence)
+
+    for (var i=0; i<sequence.length; i++) {
+      let deriving = sequence[i]
+      if (!(deriving instanceof Deriving)) continue
+
+      let target = deriving.target
+      let value = deriving.node
+      let rules = grammar.byName[target]
+      if (!rules) break
+      for (let rule of rules) {
+        let array = encode(rule, value)
+        if (!array) continue
+
+        console.log(rule.name, array)
+
+        //console.log(target, array)
+        var cost = result.cost
+        let newSeq = []
+        for (var j=0; j<i; j++) newSeq.push(sequence[j])
+        for (var k=0; k<rule.symbols.length; k++) {
+          var symbol = rule.symbols[k]
+          if (typeof symbol === 'string') {
+            newSeq.push(new Deriving(symbol, array[k]))
+          } else {
+            cost++
+            if (symbol.literal) symbol = symbol.literal
+            else if (symbol.type) symbol.value = array[k]
+            newSeq.push(symbol)
+          }
+        }
+        for (var j=i+1; j<sequence.length; j++) newSeq.push(sequence[j])
+        queue.insert({cost: cost, sequence: newSeq})
+      }
+      break
+    }
+    if (i === sequence.length) {
+      return sequence
+    }
+  }
 }
 
 const nearley = require('nearley')
@@ -52,5 +107,9 @@ let p = new nearley.Parser(g)
 p.feed("say 'hello'")
 
 let out = generate(g, ['say:', ['+', 1, 2]])
-console.log(JSON.stringify(out))
+console.log(out.map(x =>
+  typeof x === 'string' ? x :
+  x.type === 'WS' ? '' :
+  x.value ? x.value :
+  JSON.stringify(x)).join(" "))
 
