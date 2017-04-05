@@ -54,19 +54,21 @@ function encode(rule, node) {
 function expand(grammar, deriving, cb) {
   let target = deriving.target
   let value = deriving.node
-
   let rules = grammar.byName[target]
+  if (!rules) return
+
   for (let rule of rules) {
     let array = encode(rule, value)
     if (!array) continue
-    //console.log(rule.name, array)
 
     var cost = 0
     let part = []
     for (var k=0; k<rule.symbols.length; k++) {
       var symbol = rule.symbols[k]
       if (typeof symbol === 'string') {
-        part.push(new Deriving(symbol, array[k]))
+        let child = new Deriving(symbol, array[k], minCost(grammar, symbol))
+        cost += child.cost
+        part.push(child)
       } else {
         cost++
         if (symbol.literal) {
@@ -112,7 +114,30 @@ function generate(grammar, deriving) {
 
 function generateStart(grammar, node) {
   let target = grammar.start
-  return generate(grammar, new Deriving(target, node))
+  let cost = minCost(grammar, grammar.start)
+  return generate(grammar, new Deriving(target, node, cost))
+}
+
+function minCost(grammar, target) {
+  let cache = grammar._minCost = grammar._minCost || new Map()
+  let cached = cache.get(target)
+  if (cached !== undefined) return cached
+  cache.set(target, 1)
+
+  let rules = grammar.byName[target] || []
+  var min = +Infinity
+  for (let rule of rules) {
+    var cost = 0
+    for (let sym of rule.symbols) {
+      if (typeof sym === 'string') {
+        cost += minCost(grammar, sym)
+      }
+    }
+    console.log(cost)
+    min = Math.min(min, cost)
+  }
+  cache.set(target, min)
+  return min
 }
 
 const nearley = require('nearley')
