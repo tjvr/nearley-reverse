@@ -97,7 +97,7 @@ var number = factory(function decodeNumber(...d) {
   if (!isNaN(n)) return n
   var f = parseFloat(s)
   if (!isNaN(f)) return f
-  return parseInt(s)
+  return n
 }, function encodeNumber(d) {
   if (isNumber(d)) {
     return '' + d
@@ -529,6 +529,7 @@ number -> %number     {% number %}
 
 color -> %color
 
-VariableName -> "foo" {% id %}
-ListName -> "list" {% id %}
+VariableName -> "foo" {% literal('foo') %}
+              | "PixelX" {% literal('PixelX') %}
+ListName -> "list" {% literal('list') %}
 

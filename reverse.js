@@ -84,7 +84,7 @@ function generate(grammar, node) {
           } else {
             cost++
             if (symbol.literal) symbol = symbol.literal
-            else if (symbol.type && array[k]) symbol.value = array[k]
+            else if (symbol.type && array[k]) symbol = Object.assign({}, symbol, {value: array[k]})
             newSeq.push(symbol)
           }
         }
@@ -105,7 +105,17 @@ const g = nearley.Grammar.fromCompiled(require('./tosh'))
 let p = new nearley.Parser(g)
 p.feed("say 'hello'")
 
-let out = generate(g, ['say:duration:elapsed:from:', 'hello', ['*', 1, ['+', 2, 3]]])
+var alpha = ["-", [ "readVariable", "foo" ], [ "/", [ "readVariable", "foo" ], 2 ] ]
+var beta = [ "/", [ "*", [ "readVariable", "foo" ], [ "readVariable", "foo" ] ], 2 ]
+//let test = [ "setVar:to:", "PixelX", [ "=", alpha, beta ] ]
+//let test = [ "setVar:to:", "PixelX", alpha ]
+//let test = [ "gotoX:y:", alpha, beta]
+
+let test = ['say:duration:elapsed:from:', 'hello', ['+', 1, ['*', 2, 3]]]
+//let test = ["setVar:to:", "PixelX", 44]
+//let test = ["setVar:to:", "PixelX", ["-", ["%", 1, 2], 3]]
+
+let out = generate(g, test)
 console.log(out)
 console.log(out.map(x =>
   typeof x === 'string' ? x :
