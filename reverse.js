@@ -89,13 +89,12 @@ function expand(grammar, deriving, cb) {
 
 function generate(grammar, deriving) {
   let queue = new PQueue()
-  queue.insert({cost: 0, sequence: [deriving]})
+  queue.insert({cost: deriving.cost, sequence: [deriving]})
 
   while (true) {
     let result = queue.pop()
     if (!result) return
     let sequence = result.sequence
-    //console.log(sequence)
     //console.log(result.cost, sequence)
 
     for (var i=0; i<sequence.length; i++) {
@@ -104,19 +103,11 @@ function generate(grammar, deriving) {
 
       expand(grammar, deriving, (cost, part) => {
         let newSeq = []
-        cost += i
         for (var j=0; j<i; j++) newSeq.push(sequence[j])
         for (var k=0; k<part.length; k++) newSeq.push(part[k])
-        for (var j=i+1; j<sequence.length; j++) {
-          let item = sequence[j]
-          if (item instanceof Deriving) {
-            cost += item.cost
-          } else {
-            cost++
-          }
-          newSeq.push(item)
-        }
-        queue.insert({cost: cost, sequence: newSeq})
+        for (var j=i+1; j<sequence.length; j++) newSeq.push(sequence[j])
+        // assert(cost === result.cost - deriving.cost + partCost) {
+        queue.insert({cost: result.cost - deriving.cost + cost, sequence: newSeq})
       })
       break
     }
@@ -145,6 +136,8 @@ function minCost(grammar, target) {
     for (let sym of rule.symbols) {
       if (typeof sym === 'string') {
         cost += minCost(grammar, sym)
+      } else {
+        cost++
       }
     }
     min = Math.min(min, cost)
@@ -171,6 +164,7 @@ let test = [ "gotoX:y:", ["-", 1, ["*", 2, 3]], ["/", 4, 5]]
 
 
 let out = generateStart(g, test)
+//let out = generate(g, new Deriving('sb', ["*", 1, ["+", 2, 3]]), minCost(g, 'sb'))
 console.log(out)
 console.log(out.map(x =>
   typeof x === 'string' ? x :
