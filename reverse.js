@@ -1,9 +1,10 @@
 
 
 class Deriving {
-  constructor(target, node) {
+  constructor(target, node, cost) {
     this.target = target
     this.node = node
+    this.cost = cost
   }
 }
 
@@ -56,10 +57,12 @@ function expand(grammar, deriving, cb) {
   let value = deriving.node
   let rules = grammar.byName[target]
   if (!rules) return
+  //console.log(target, value)
 
   for (let rule of rules) {
     let array = encode(rule, value)
     if (!array) continue
+    //console.log(rule.name, array)
 
     var cost = 0
     let part = []
@@ -79,6 +82,7 @@ function expand(grammar, deriving, cb) {
         part.push(symbol)
       }
     }
+    if (isNaN(cost)) throw new Error('NaN')
     cb(cost, part)
   }
 }
@@ -92,6 +96,7 @@ function generate(grammar, deriving) {
     if (!result) return
     let sequence = result.sequence
     //console.log(sequence)
+    //console.log(result.cost, sequence)
 
     for (var i=0; i<sequence.length; i++) {
       let deriving = sequence[i]
@@ -99,10 +104,19 @@ function generate(grammar, deriving) {
 
       expand(grammar, deriving, (cost, part) => {
         let newSeq = []
+        cost += i
         for (var j=0; j<i; j++) newSeq.push(sequence[j])
         for (var k=0; k<part.length; k++) newSeq.push(part[k])
-        for (var j=i+1; j<sequence.length; j++) newSeq.push(sequence[j])
-        queue.insert({cost: result.cost + cost, sequence: newSeq})
+        for (var j=i+1; j<sequence.length; j++) {
+          let item = sequence[j]
+          if (item instanceof Deriving) {
+            cost += item.cost
+          } else {
+            cost++
+          }
+          newSeq.push(item)
+        }
+        queue.insert({cost: cost, sequence: newSeq})
       })
       break
     }
@@ -133,7 +147,6 @@ function minCost(grammar, target) {
         cost += minCost(grammar, sym)
       }
     }
-    console.log(cost)
     min = Math.min(min, cost)
   }
   cache.set(target, min)
