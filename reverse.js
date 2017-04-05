@@ -51,6 +51,36 @@ function encode(rule, node) {
   }
 }
 
+function expand(grammar, deriving, cb) {
+  let target = deriving.target
+  let value = deriving.node
+
+  let rules = grammar.byName[target]
+  for (let rule of rules) {
+    let array = encode(rule, value)
+    if (!array) continue
+    //console.log(rule.name, array)
+
+    var cost = 0
+    let part = []
+    for (var k=0; k<rule.symbols.length; k++) {
+      var symbol = rule.symbols[k]
+      if (typeof symbol === 'string') {
+        part.push(new Deriving(symbol, array[k]))
+      } else {
+        cost++
+        if (symbol.literal) {
+          symbol = symbol.literal
+        } else if (symbol.type && array[k]) {
+          symbol = Object.assign({}, symbol, {value: array[k]})
+        }
+        part.push(symbol)
+      }
+    }
+    cb(cost, part)
+  }
+}
+
 function generate(grammar, node) {
   let queue = new PQueue()
   queue.insert({cost: 0, sequence: [new Deriving(grammar.start, node)]})
@@ -65,33 +95,13 @@ function generate(grammar, node) {
       let deriving = sequence[i]
       if (!(deriving instanceof Deriving)) continue
 
-      let target = deriving.target
-      let value = deriving.node
-      let rules = grammar.byName[target]
-      if (!rules) break
-      for (let rule of rules) {
-        let array = encode(rule, value)
-        if (!array) continue
-
-        //console.log(rule.name, array)
-
-        var cost = result.cost
+      expand(grammar, deriving, (cost, part) => {
         let newSeq = []
         for (var j=0; j<i; j++) newSeq.push(sequence[j])
-        for (var k=0; k<rule.symbols.length; k++) {
-          var symbol = rule.symbols[k]
-          if (typeof symbol === 'string') {
-            newSeq.push(new Deriving(symbol, array[k]))
-          } else {
-            cost++
-            if (symbol.literal) symbol = symbol.literal
-            else if (symbol.type && array[k]) symbol = Object.assign({}, symbol, {value: array[k]})
-            newSeq.push(symbol)
-          }
-        }
+        for (var k=0; k<part.length; k++) newSeq.push(part[k])
         for (var j=i+1; j<sequence.length; j++) newSeq.push(sequence[j])
-        queue.insert({cost: cost, sequence: newSeq})
-      }
+        queue.insert({cost: result.cost + cost, sequence: newSeq})
+      })
       break
     }
     if (i === sequence.length) {
