@@ -81,9 +81,9 @@ function expand(grammar, deriving, cb) {
   }
 }
 
-function generate(grammar, node) {
+function generate(grammar, deriving) {
   let queue = new PQueue()
-  queue.insert({cost: 0, sequence: [new Deriving(grammar.start, node)]})
+  queue.insert({cost: 0, sequence: [deriving]})
 
   while (true) {
     let result = queue.pop()
@@ -110,6 +110,11 @@ function generate(grammar, node) {
   }
 }
 
+function generateStart(grammar, node) {
+  let target = grammar.start
+  return generate(grammar, new Deriving(target, node))
+}
+
 const nearley = require('nearley')
 const g = nearley.Grammar.fromCompiled(require('./tosh'))
 
@@ -126,7 +131,8 @@ let test = [ "gotoX:y:", ["-", 1, ["*", 2, 3]], ["/", 4, 5]]
 //let test = ["setVar:to:", "PixelX", 44]
 //let test = ["setVar:to:", "PixelX", ["-", ["%", 1, 2], 3]]
 
-let out = generate(g, test)
+
+let out = generateStart(g, test)
 console.log(out)
 console.log(out.map(x =>
   typeof x === 'string' ? x :
