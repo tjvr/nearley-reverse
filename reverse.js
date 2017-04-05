@@ -72,9 +72,8 @@ function generate(grammar, node) {
         let array = encode(rule, value)
         if (!array) continue
 
-        console.log(rule.name, array)
+        //console.log(rule.name, array)
 
-        //console.log(target, array)
         var cost = result.cost
         let newSeq = []
         for (var j=0; j<i; j++) newSeq.push(sequence[j])
@@ -85,7 +84,7 @@ function generate(grammar, node) {
           } else {
             cost++
             if (symbol.literal) symbol = symbol.literal
-            else if (symbol.type) symbol.value = array[k]
+            else if (symbol.type && array[k]) symbol.value = array[k]
             newSeq.push(symbol)
           }
         }
@@ -106,10 +105,13 @@ const g = nearley.Grammar.fromCompiled(require('./tosh'))
 let p = new nearley.Parser(g)
 p.feed("say 'hello'")
 
-let out = generate(g, ['say:', ['+', 1, 2]])
+let out = generate(g, ['say:duration:elapsed:from:', 'hello', ['*', 1, ['+', 2, 3]]])
+console.log(out)
 console.log(out.map(x =>
   typeof x === 'string' ? x :
-  x.type === 'WS' ? '' :
+  x.type === 'WS' ? ' ' :
+  x.type === 'string' ? JSON.stringify(x.value) :
   x.value ? x.value :
-  JSON.stringify(x)).join(" "))
+  JSON.stringify(x)).join("")
+)
 

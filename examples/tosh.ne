@@ -87,6 +87,10 @@ function block(selector, ...rest) {
   })
 }
 
+function isNumber(x) {
+  return typeof x === 'number' && (''+x) !== 'NaN'
+}
+
 var number = factory(function decodeNumber(...d) {
   var s = d[0].value //.join('')
   var n = parseInt(s)
@@ -95,16 +99,28 @@ var number = factory(function decodeNumber(...d) {
   if (!isNaN(f)) return f
   return parseInt(s)
 }, function encodeNumber(d) {
-  if (typeof d !== 'number') { return false }
-  if ('' + d === 'NaN') { return false }
-  return '' + d
+  if (isNumber(d)) {
+    return '' + d
+  }
+  return false
 })
 
-var string = factory(function decodeNumber(...d) {
+var negateNumber = factory(function (a, _, n) {
+  return -n
+}, function (d) {
+  if (isNumber(d) && d < 0) {
+    return [ , , -d]
+  }
+  return false
+})
+
+var string = factory(function decodeString(...d) {
   return d[0].value
-}, function encodeNumber(d) {
-  if (typeof d !== 'string') { return false }
-  return d
+}, function encodeString(d) {
+  if (typeof d === 'string') {
+    return d
+  }
+  return false
 })
 
 
@@ -170,9 +186,9 @@ b_or -> b_or __ "or" __ b7 {% block("|", 0, 4) %}
 b7 -> "not" __ b7 {% block("not", 2) %}
     | b6 {% id %}
 
-b6 -> sb _ "<" _ sb {% block("<", 0, 4) %}
-    | sb _ ">" _ sb {% block(">", 0, 4) %}
-    | sb _ "=" _ sb {% block("=", 0, 4) %}
+b6 -> sb __ "<" __ sb {% block("<", 0, 4) %}
+    | sb __ ">" __ sb {% block(">", 0, 4) %}
+    | sb __ "=" __ sb {% block("=", 0, 4) %}
     | m_list __ "contains" __ sb _ "?" {% block("list:contains:", 0, 4) %}
     | predicate {% id %}
     | b2 {% id %}
@@ -180,13 +196,13 @@ b6 -> sb _ "<" _ sb {% block("<", 0, 4) %}
 b2 -> b_parens {% id %}
     | b0 {% id %}
 
-n4 -> n4 _ "+" _ n3 {% block("+", 0, 4) %}
-    | n4 _ "-" _ n3 {% block("-", 0, 4) %}
+n4 -> n4 __ "+" __ n3 {% block("+", 0, 4) %}
+    | n4 __ "-" __ n3 {% block("-", 0, 4) %}
     | n3 {% id %}
 
-n3 -> n3 _ "*" _ n2 {% block("*", 0, 4) %}
-    | n3 _ "/" _ n2 {% block("/", 0, 4) %}
-    | n3 _ "mod" _ n2 {% block("%", 0, 4) %}
+n3 -> n3 __ "*" __ n2 {% block("*", 0, 4) %}
+    | n3 __ "/" __ n2 {% block("/", 0, 4) %}
+    | n3 __ "mod" __ n2 {% block("%", 0, 4) %}
     | n2 {% id %}
 
 n2 -> "round" __ n2 {% block("rounded", 2) %}
@@ -206,7 +222,7 @@ n1 -> simple_reporter {% id %}
 s2 -> s0 {% id %}
     | n1 {% id %}
 
-n0 -> "-" _ number {% factory((a, _, n) => -n, (n) => [null, null, -n]) %}
+n0 -> "-" _ number {% negateNumber %}
     | number {% id %}
     | "_" {% literal("") %}
 
@@ -493,7 +509,7 @@ simple_reporter -> "mouse" __ "x" {% block("mouseX") %}
                  | "video" __ m_videoMotionType __ "on" __ m_stageOrThis {% block("senseVideoMotion", 2, 6) %}
                  | "timer" {% block("timer") %}
                  | "current" __ m_timeAndDate {% block("timeAndDate", 2) %}
-                 | "days" __ "since" __ number {% block("timestamp", 4) %}
+                 | "days" __ "since" __ "2000" {% block("timestamp", 4) %}
                  | "username" {% block("getUserName") %}
                  | "item" __ d_listItem __ "of" __ m_list {% block("getLine:ofList:", 2, 6) %}
                  | "length" __ "of" __ m_list {% block("lineCountOfList:", 4) %}
@@ -505,7 +521,7 @@ block -> "else" {% block("else") %}
        | "..." {% block("ellips") %}
 
 
-_ -> %WS:? {% ignore %}
+_ -> %WS | null {% ignore %}
 __ -> %WS {% ignore %}
 
 string -> %string     {% string %}
