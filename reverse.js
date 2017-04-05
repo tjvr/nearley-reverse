@@ -19,6 +19,7 @@ class PQueue {
     }
     var item = this.first
     var previous = null
+    // nb. < vs <= is a significant perf difference!
     while (item !== null && item.value.cost < value.cost) {
       previous = item
       item = item.next
@@ -109,9 +110,9 @@ var alpha = ["-", [ "readVariable", "foo" ], [ "/", [ "readVariable", "foo" ], 2
 var beta = [ "/", [ "*", [ "readVariable", "foo" ], [ "readVariable", "foo" ] ], 2 ]
 //let test = [ "setVar:to:", "PixelX", [ "=", alpha, beta ] ]
 //let test = [ "setVar:to:", "PixelX", alpha ]
-//let test = [ "gotoX:y:", alpha, beta]
+let test = [ "gotoX:y:", ["-", 1, ["*", 2, 3]], ["/", 4, 5]]
 
-let test = ['say:duration:elapsed:from:', 'hello', ['+', 1, ['*', 2, 3]]]
+//let test = ['say:duration:elapsed:from:', 'hello', ['+', 1, ['*', 2, 3]]]
 //let test = ["setVar:to:", "PixelX", 44]
 //let test = ["setVar:to:", "PixelX", ["-", ["%", 1, 2], 3]]
 
