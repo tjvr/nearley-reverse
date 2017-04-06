@@ -1,4 +1,4 @@
-
+var Generator = function(grammar) {
 
 class Deriving {
   constructor(target, node, cost) {
@@ -52,7 +52,7 @@ function encode(rule, node) {
   }
 }
 
-function expand(grammar, deriving, cb) {
+function expand(deriving, cb) {
   let target = deriving.target
   let value = deriving.node
   let rules = grammar.byName[target]
@@ -69,7 +69,7 @@ function expand(grammar, deriving, cb) {
     for (var k=0; k<rule.symbols.length; k++) {
       var symbol = rule.symbols[k]
       if (typeof symbol === 'string') {
-        let child = new Deriving(symbol, array[k], minCost(grammar, symbol))
+        let child = new Deriving(symbol, array[k], minCost(symbol))
         cost += child.cost
         part.push(child)
       } else {
@@ -87,7 +87,7 @@ function expand(grammar, deriving, cb) {
   }
 }
 
-function generate(grammar, deriving) {
+function generate(deriving) {
   let queue = new PQueue()
   queue.insert({cost: deriving.cost, sequence: [deriving]})
 
@@ -101,7 +101,7 @@ function generate(grammar, deriving) {
       let deriving = sequence[i]
       if (!(deriving instanceof Deriving)) continue
 
-      expand(grammar, deriving, (cost, part) => {
+      expand(deriving, (cost, part) => {
         let newSeq = []
         for (var j=0; j<i; j++) newSeq.push(sequence[j])
         for (var k=0; k<part.length; k++) newSeq.push(part[k])
@@ -117,14 +117,16 @@ function generate(grammar, deriving) {
   }
 }
 
-function generateStart(grammar, node) {
+function generateStart(node) {
   let target = grammar.start
-  let cost = minCost(grammar, grammar.start)
-  return generate(grammar, new Deriving(target, node, cost))
+  let cost = minCost(grammar.start)
+  return generate(new Deriving(target, node, cost))
 }
 
-function minCost(grammar, target) {
-  let cache = grammar._minCost = grammar._minCost || new Map()
+
+let cache = new Map()
+
+function minCost(target) {
   let cached = cache.get(target)
   if (cached !== undefined) return cached
   cache.set(target, 1)
@@ -135,7 +137,7 @@ function minCost(grammar, target) {
     var cost = 0
     for (let sym of rule.symbols) {
       if (typeof sym === 'string') {
-        cost += minCost(grammar, sym)
+        cost += minCost(sym)
       } else {
         cost++
       }
@@ -146,8 +148,14 @@ function minCost(grammar, target) {
   return min
 }
 
+return {generate: generateStart}
+
+}
+
+
 const nearley = require('nearley')
 const g = nearley.Grammar.fromCompiled(require('./tosh'))
+let gen = Generator(g)
 
 let p = new nearley.Parser(g)
 p.feed("say 'hello'")
@@ -163,7 +171,7 @@ let test = [ "gotoX:y:", ["-", 1, ["*", 2, 3]], ["/", 4, 5]]
 //let test = ["setVar:to:", "PixelX", ["-", ["%", 1, 2], 3]]
 
 
-let out = generateStart(g, test)
+let out = gen.generate(test)
 //let out = generate(g, new Deriving('sb', ["*", 1, ["+", 2, 3]]), minCost(g, 'sb'))
 console.log(out)
 console.log(out.map(x =>
