@@ -10,9 +10,11 @@
     "nearley": "git://github.com/Hardmath123/nearley.git#moo"
   },
   "scripts": {
-    "build": "nearleyc examples/tosh.ne > tosh.js"
+    "benchmark": "benchr benchmark/benchmark.js",
+    "build": "nearleyc examples/tosh.ne > examples/tosh.js"
   },
   "devDependencies": {
+    "benchr": "^3.4.0",
     "expect": "^1.20.2",
     "jest": "^19.0.2",
     "moo": "^0.2.0"
