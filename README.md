@@ -61,5 +61,22 @@ number -> [0-9]:+    {% factory(
 
 And that's it! `nearley-reverse` takes care of the hard work of choosing which grammar rules to apply to get the shortest possible output string for your AST.
 
+
+Hold on, how do I use it?
+=========================
+
+Right, yes. You call it like this:
+
+```js
+const reverse = require('nearley-reverse')
+
+let grammar = nearley.Grammar.fromCompiled(require('my-grammar.js'))
+
+let tokens = reverse(grammar, ['+', 1, 2])
+tokens.join('') // => '1 + 2'
+```
+
+
+
 Go forth, and unparse things!
 
