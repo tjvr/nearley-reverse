@@ -421,8 +421,7 @@ block -> "move" __ n __ "steps" {% block("forward:", 2) %}
        | "next" __ "costume" {% block("nextCostume") %}
        | "next" __ "backdrop" {% block("nextScene") %}
        | "switch" __ "backdrop" __ "to" __ m_backdrop {% block("startScene", 6) %}
-       | "switch" __ "backdrop" __ "to" __ m_backdrop __ "and" __ "wait" {%
-     block("startSceneAndWait", 6) %}
+       | "switch" __ "backdrop" __ "to" __ m_backdrop __ "and" __ "wait" {% block("startSceneAndWait", 6) %}
        | "change" __ m_effect __ "effect" __ "by" __ n {% block("changeGraphicEffect:by:", 2, 8) %}
        | "set" __ m_effect __ "effect" __ "to" __ n {% block("setGraphicEffect:to:", 2, 8) %}
        | "clear" __ "graphic" __ "effects" {% block("filterReset") %}
