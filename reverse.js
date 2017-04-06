@@ -1,6 +1,4 @@
 
-var generate = function(grammar, node) {
-
 function get_or_set(map, key, factory) {
   var out = map.get(key)
   if (!out) {
@@ -8,51 +6,6 @@ function get_or_set(map, key, factory) {
   }
   return out
 }
-
-class Deriving {
-  constructor(target, node) {
-    this.target = target
-    this.node = node
-    this.cost = null
-  }
-
-  init() {
-    if (this.cost !== null) return
-    this.cost = +Infinity
-    this.best = null
-    expand(this, (cost, part) => {
-      if (cost < this.cost) {
-        this.cost = cost
-        this.best = part
-      }
-    })
-  }
-
-  static get(target, node) {
-    let byNode = get_or_set(Deriving.byTarget, target, () => new Map())
-    let deriving = get_or_set(byNode, node, () => new Deriving(target, node))
-    deriving.init()
-    return deriving
-  }
-
-  get() {
-    let sequence = this.best
-    let result = []
-    for (var i=0; i<sequence.length; i++) {
-      let item = sequence[i]
-      if (item instanceof Deriving) {
-        let part = item.get()
-        for (var j=0; j<part.length; j++) {
-          result.push(part[j])
-        }
-      } else {
-        result.push(sequence[i])
-      }
-    }
-    return result
-  }
-}
-Deriving.byTarget = new Map()
 
 function encode(rule, node) {
   let factory = rule.postprocess
@@ -66,44 +19,76 @@ function encode(rule, node) {
   }
 }
 
-function expand(deriving, cb) {
-  let target = deriving.target
-  let value = deriving.node
-  let rules = grammar.byName[target]
-  if (!rules) return
-  //console.log(target, value)
+function generate(grammar, node) {
 
-  for (let rule of rules) {
-    let array = encode(rule, value)
-    if (!array) continue
-    //console.log(rule.name, array)
+  function expand(target, value, cb) {
+    let rules = grammar.byName[target]
+    if (!rules) return
+    //console.log(target, value)
 
-    var cost = 0
-    let part = []
-    for (var k=0; k<rule.symbols.length; k++) {
-      var symbol = rule.symbols[k]
-      if (typeof symbol === 'string') {
-        let child = Deriving.get(symbol, array[k])
-        cost += child.cost
-        part.push(child)
-      } else {
-        cost++
-        if (symbol.literal) {
-          symbol = symbol.literal
-        } else if (symbol.type && array[k]) {
-          symbol = Object.assign({}, symbol, {value: array[k]})
+    var bestCost = +Infinity
+    var best = null
+    for (let rule of rules) {
+      let array = encode(rule, value)
+      if (!array) continue
+      //console.log(rule.name, array)
+
+      var cost = 0
+      let part = []
+      for (var k=0; k<rule.symbols.length; k++) {
+        var symbol = rule.symbols[k]
+        if (typeof symbol === 'string') {
+          let child = generate(symbol, array[k])
+          cost += child.cost
+          part.push(child)
+        } else {
+          cost++
+          if (symbol.literal) {
+            symbol = symbol.literal
+          } else if (symbol.type && array[k]) {
+            symbol = Object.assign({}, symbol, {value: array[k]})
+          }
+          part.push(symbol)
         }
-        part.push(symbol)
+      }
+      if (cost < bestCost) {
+        best = part
+        bestCost = cost
       }
     }
-    //console.log(rule.name, '->', cost, array, rule.symbols)
-    cb(cost, part)
+    return {cost: bestCost, part: best}
   }
-}
 
-let deriving = Deriving.get(grammar.start, node)
-return deriving.get()
+  let byTarget = new Map()
 
+  function generate(target, node) {
+    let byFragment = get_or_set(byTarget, target, () => new Map())
+    var obj = byFragment.get(node)
+    if (obj) return obj
+
+    // construct Derivation object
+    // this may get picked up by other/recursive calls to expand()
+    byFragment.set(node, obj = {})
+
+    let {cost, part} = expand(target, node)
+
+    obj.cost = cost
+    obj.sequence = part
+    return obj
+  }
+
+  function flatten(out, obj) {
+    for (let item of obj.sequence) {
+      if (item.cost !== undefined) {
+        flatten(out, item)
+      } else {
+        out.push(item)
+      }
+    }
+    return out
+  }
+
+  return flatten([], generate(grammar.start, node))
 }
 
 const nearley = require('nearley')
@@ -123,7 +108,7 @@ let test = [ "setVar:to:", "PixelX", [ "-", [ "*", [ "*", [ "%", [ "-", [ "*", [
 //let test = ["setVar:to:", "PixelX", ["-", ["%", 1, 2], 3]]
 
 let out = generate(g, test)
-//console.log(out)
+console.log(out)
 let text = out.map(x =>
   typeof x === 'string' ? x :
   x.type === 'WS' ? ' ' :
