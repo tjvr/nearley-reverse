@@ -70,16 +70,18 @@ function generate(grammar, node) {
     let byFragment = get_or_set(byTarget, target, () => new Map())
 
     // construct Derivation object
-    let obj = get_or_set(byFragment, node, () => ({isNew: true}))
+    let derivation = get_or_set(byFragment, node, () => ({isNew: true}))
 
     // build shortest sequence
-    if (obj.isNew) {
-      delete obj.isNew
+    if (derivation.isNew) {
+      // the Derivation acts as a marker to avoid infinite recursion
+      delete derivation.isNew
+
       let {cost, part} = expand(target, node)
-      obj.cost = cost
-      obj.sequence = part
+      derivation.cost = cost
+      derivation.sequence = part
     }
-    return obj
+    return derivation
   }
 
   function flatten(out, obj) {
