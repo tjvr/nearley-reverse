@@ -21,7 +21,7 @@ function encode(rule, node) {
 
 function generate(grammar, node) {
 
-  function expand(target, value, cb) {
+  function expand(target, value) {
     let rules = grammar.byName[target]
     if (!rules) return
     //console.log(target, value)
@@ -39,6 +39,11 @@ function generate(grammar, node) {
         var symbol = rule.symbols[k]
         if (typeof symbol === 'string') {
           let child = generate(symbol, array[k])
+          if (isNaN(child.cost)) {
+            // indicates a recursive (bogus) derivation -- avoid these
+            cost = +Infinity
+            break
+          }
           cost += child.cost
           part.push(child)
         } else {
@@ -63,17 +68,17 @@ function generate(grammar, node) {
 
   function generate(target, node) {
     let byFragment = get_or_set(byTarget, target, () => new Map())
-    var obj = byFragment.get(node)
-    if (obj) return obj
 
     // construct Derivation object
-    // this may get picked up by other/recursive calls to expand()
-    byFragment.set(node, obj = {})
+    let obj = get_or_set(byFragment, node, () => ({isNew: true}))
 
-    let {cost, part} = expand(target, node)
-
-    obj.cost = cost
-    obj.sequence = part
+    // build shortest sequence
+    if (obj.isNew) {
+      delete obj.isNew
+      let {cost, part} = expand(target, node)
+      obj.cost = cost
+      obj.sequence = part
+    }
     return obj
   }
 
@@ -122,6 +127,4 @@ p.feed(text)
 
 let expect = require('expect')
 expect(p.results[0]).toEqual(test)
-console.log(JSON.stringify(p.results[0]))
-console.log(JSON.stringify(test))
 
