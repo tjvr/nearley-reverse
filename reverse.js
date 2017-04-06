@@ -1,12 +1,88 @@
+
 var Generator = function(grammar) {
 
+function get_or_set(map, key, factory) {
+  var out = map.get(key)
+  if (!out) {
+    map.set(key, out = factory())
+  }
+  return out
+}
+
 class Deriving {
-  constructor(target, node, cost) {
+  constructor(target, node) {
     this.target = target
     this.node = node
-    this.cost = cost
+    this.cost = null
+  }
+
+  init() {
+    if (this.cost !== null) return
+    this.cost = +Infinity
+    this.queue = new PQueue()
+    expand(this, (cost, part) => {
+      this.queue.insert({cost: cost, sequence: part})
+      this.cost = Math.min(cost, this.cost)
+    })
+  }
+
+  static get(target, node) {
+    let byNode = get_or_set(Deriving.byTarget, target, () => new Map())
+    let deriving = get_or_set(byNode, node, () => new Deriving(target, node))
+    deriving.init()
+    return deriving
+  }
+
+  best(maxCost) {
+    let queue = this.queue
+    while (this.cost <= maxCost) {
+      let way = queue.pop()
+      if (!way) return {cost: +Infinity, valid: false}
+
+      var cost = 0
+      let sequence = way.sequence
+      var valid = true
+      for (let item of sequence) {
+        if (item instanceof Deriving) {
+          let result = item.best(maxCost - cost)
+          cost += result.cost
+          if (!result.valid) {
+            valid = false
+          }
+        } else {
+          cost++
+        }
+        if (cost > maxCost) break
+      }
+      way.cost = cost
+      queue.insert(way)
+      this.cost = queue.best()
+      if (valid && cost <= maxCost) {
+        return {cost: this.cost, valid: true}
+      }
+    }
+    return {cost: this.cost, valid: false}
+  }
+
+  get() {
+    let way = this.queue.peek()
+    let sequence = way.sequence
+    let result = []
+    for (var i=0; i<sequence.length; i++) {
+      let item = sequence[i]
+      if (item instanceof Deriving) {
+        let part = item.get()
+        for (var j=0; j<part.length; j++) {
+          result.push(part[j])
+        }
+      } else {
+        result.push(sequence[i])
+      }
+    }
+    return result
   }
 }
+Deriving.byTarget = new Map()
 
 class PQueue {
   constructor() {
@@ -37,6 +113,16 @@ class PQueue {
     let item = this.first
     this.first = item.next
     return item.value
+  }
+
+  peek() {
+    if (!this.first) { return }
+    return this.first.value
+  }
+
+  best() {
+    let value = this.peek()
+    return value ? value.cost : +Infinity
   }
 }
 
@@ -69,7 +155,7 @@ function expand(deriving, cb) {
     for (var k=0; k<rule.symbols.length; k++) {
       var symbol = rule.symbols[k]
       if (typeof symbol === 'string') {
-        let child = new Deriving(symbol, array[k], minCost(symbol))
+        let child = Deriving.get(symbol, array[k], minCost(symbol))
         cost += child.cost
         part.push(child)
       } else {
@@ -82,47 +168,37 @@ function expand(deriving, cb) {
         part.push(symbol)
       }
     }
-    if (isNaN(cost)) throw new Error('NaN')
+    //console.log(rule.name, '->', cost, array, rule.symbols)
     cb(cost, part)
   }
 }
 
 function generate(deriving) {
-  let queue = new PQueue()
-  queue.insert({cost: deriving.cost, sequence: [deriving]})
+  var maxCost = deriving.cost
+  // iterative deepening
+  /*
+  console.log(maxCost)
+  var result
+  do {
+    result = deriving.best(maxCost)
+    console.log(result)
+    maxCost++
+  } while (!result.valid && result.cost < +Infinity)
 
-  while (true) {
-    let result = queue.pop()
-    if (!result) return
-    let sequence = result.sequence
-    //console.log(result.cost, sequence)
+  if (result.valid) {
+  */
+    console.log('yay')
+    return deriving.get()
+  // }
 
-    for (var i=0; i<sequence.length; i++) {
-      let deriving = sequence[i]
-      if (!(deriving instanceof Deriving)) continue
-
-      expand(deriving, (cost, part) => {
-        let newSeq = []
-        for (var j=0; j<i; j++) newSeq.push(sequence[j])
-        for (var k=0; k<part.length; k++) newSeq.push(part[k])
-        for (var j=i+1; j<sequence.length; j++) newSeq.push(sequence[j])
-        // assert(cost === result.cost - deriving.cost + partCost) {
-        queue.insert({cost: result.cost - deriving.cost + cost, sequence: newSeq})
-      })
-      break
-    }
-    if (i === sequence.length) {
-      return sequence
-    }
-  }
+  return null
 }
 
 function generateStart(node) {
   let target = grammar.start
   let cost = minCost(grammar.start)
-  return generate(new Deriving(target, node, cost))
+  return generate(Deriving.get(target, node))
 }
-
 
 let cache = new Map()
 
@@ -152,7 +228,6 @@ return {generate: generateStart}
 
 }
 
-
 const nearley = require('nearley')
 const g = nearley.Grammar.fromCompiled(require('./tosh'))
 let gen = Generator(g)
@@ -164,12 +239,11 @@ var alpha = ["-", [ "readVariable", "foo" ], [ "/", [ "readVariable", "foo" ], 2
 var beta = [ "/", [ "*", [ "readVariable", "foo" ], [ "readVariable", "foo" ] ], 2 ]
 //let test = [ "setVar:to:", "PixelX", [ "=", alpha, beta ] ]
 //let test = [ "setVar:to:", "PixelX", alpha ]
-let test = [ "gotoX:y:", ["-", 1, ["*", 2, 3]], ["/", 4, 5]]
+let test = [ "gotoX:y:", ["-", 1, ["*", 2, 3]], ["/", 4, ["-", 5, 6]]]
 
 //let test = ['say:duration:elapsed:from:', 'hello', ['+', 1, ['*', 2, 3]]]
 //let test = ["setVar:to:", "PixelX", 44]
 //let test = ["setVar:to:", "PixelX", ["-", ["%", 1, 2], 3]]
-
 
 let out = gen.generate(test)
 //let out = generate(g, new Deriving('sb', ["*", 1, ["+", 2, 3]]), minCost(g, 'sb'))
