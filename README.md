@@ -11,7 +11,7 @@ The flagship use case is for [tosh](https://tosh.tjvr.org/), a text-based editor
 
 
 How do I use it?
-================
+----------------
 
 You must annotate your nearley grammar to use **factories** instead of postprocessors. A factory is just like a postprocessor function, except it additionally has an `encode` method attached to it.
 
@@ -62,8 +62,8 @@ number -> [0-9]:+    {% factory(
 And that's it! `nearley-reverse` takes care of the hard work of choosing which grammar rules to apply to get the shortest possible output string for your AST.
 
 
-Hold on, how do I use it?
-=========================
+But hold on, how do I _use_ it?
+-------------------------------
 
 Right, yes. You call it like this:
 
