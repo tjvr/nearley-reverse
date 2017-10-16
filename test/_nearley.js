@@ -10,7 +10,7 @@ function parse(grammar, input) {
   if (grammar.should) {
     grammar.should.have.keys(['ParserRules', 'ParserStart'])
   }
-  var p = new nearley.Parser(grammar.ParserRules, grammar.ParserStart)
+  var p = new nearley.Parser(grammar)
   p.feed(input)
   return p.results
 }
@@ -23,17 +23,22 @@ function compile(source) {
   var c = Compile(results[0], {})
 
   // generate
-  var compiledGrammar = generate(c, 'grammar')
+  var source = generate(c, 'grammar')
 
   // eval
-  return evalGrammar(compiledGrammar)
+  return evalGrammar(source)
 }
 
-function evalGrammar(compiledGrammar) {
-  var f = new Function('module', compiledGrammar)
-  var m = {exports: {}}
-  f(m)
-  return m.exports
+
+function requireFromString(source) {
+    var module = {exports: null};
+    eval(source)
+    return module.exports;
+}
+
+function evalGrammar(source) {
+    const exports = requireFromString(source);
+    return new nearley.Grammar.fromCompiled(exports);
 }
 
 function read(filename) {

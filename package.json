@@ -1,22 +1,23 @@
 {
   "name": "nearley-reverse",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Build source code from an AST",
   "main": "reverse.js",
   "repository": "https://github.com/tjvr/nearley-reverse",
   "author": "tjvr <tim@tjvr.org>",
   "license": "BSD-3-Clause",
   "dependencies": {
-    "nearley": "git://github.com/Hardmath123/nearley.git#moo"
+    "nearley": "^2.11.0"
   },
   "scripts": {
     "benchmark": "benchr benchmark/benchmark.js",
-    "build": "nearleyc examples/tosh.ne > examples/tosh.js"
+    "build": "nearleyc examples/tosh.ne > examples/tosh.js",
+    "test": "jest"
   },
   "devDependencies": {
     "benchr": "^3.4.0",
     "expect": "^1.20.2",
     "jest": "^19.0.2",
-    "moo": "^0.2.0"
+    "moo": "^0.3.2"
   }
 }
